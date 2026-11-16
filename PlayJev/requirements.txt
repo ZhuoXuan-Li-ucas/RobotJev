@@ -12,4 +12,4 @@ safetensors==0.8.0
 numpy==2.5.3
 pillow
 einops
-playwright==1.63.0
+playwright==1.65.1
