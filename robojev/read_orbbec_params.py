@@ -43,7 +43,7 @@ def dist(d):
     return out
 
 
-SERIAL = "CV27864000V2"          # 默认腕部 305；两台 Orbbec 同厂商号，必须按序列号选和复位
+SERIAL = "CV27864000CB"          # 默认腕部 305（11-14 换的这台；旧的是 CV27864000V2）；两台 Orbbec 同厂商号，必须按序列号选和复位
 
 
 def reset_usb(serial: str) -> None:

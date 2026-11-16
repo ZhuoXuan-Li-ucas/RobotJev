@@ -22,7 +22,7 @@ OBSENSOR_INDEX = 0
 ORBBEC_VID = "2bc5"
 # 按序列号认相机（2026-09-29）：桌上有两台 Orbbec 以后，按厂商 ID 找会找到哪台算哪台 ——
 # 复位可能复位错、打开可能打开错。口号也不写死（9/28 重启后腕部从 1-10.3 换到了 1-10.2）。
-WRIST_SERIAL = "CV27864000V2"        # 腕部 Gemini 305（产品号 0840）
+WRIST_SERIAL = "CV27864000CB"        # 腕部 Gemini 305（产品号 0840）。11-14 换成这台（装在天机 Marvin 右臂夹爪上）；之前是 CV27864000V2
 TOP_SERIAL = "CP0BB53000FC"          # 俯视 Gemini 335（产品号 0800）
 
 

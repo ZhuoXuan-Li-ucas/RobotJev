@@ -11,9 +11,10 @@
 
 > [!WARNING]
 > **按现在的硬件，真机流程跑不了。** 9/30 的标定全部作废：
-> - 末端从 TG9801 夹爪换成了因时灵巧手（10-12），而 robojev 的满开宽度、力度档位、手指扫掠盒、`gripper.json` 都是按夹爪定的；
-> - 腕部 305 换了装法（10-12 重新装到手上），`wrist_J.json` 和夹持中心作废；
-> - 俯视 335 换了机位（10-13 改成正上方俯视），`top335_extrinsic.json` 作废。
+> - **11-14 起机械臂换成了天机 Marvin 双臂，AR5 已经换下。** 11-16 起 robojev 有了 Marvin 右臂版的点选抓取，是第一步：只用 335 直线接近，不用腕部。入口是 `marvin_grasp`、`calibrate_top335_marvin`，臂层在 `robojev/marvin.py`。**还没上真机跑过，先要标 335 外参。** 旧入口 `click_grasp`、`run_composite` 等仍然只会驱动 AR5。Marvin 的连接方法、回 0 位和抬臂的小工具在工作区的 [`数据_硬件/天机Marvin/`](../../../数据_硬件/天机Marvin/README.md)；
+> - 末端：10-12 换成过因时灵巧手；**11-14 起又是 TG9801 夹爪，装在 Marvin 右臂上**。装法和 AR5 时不同：夹持中心距法兰 100 mm（指尖 150 mm），手指开合方向和法兰 X 轴差 45°。所以 `gripper.json` 作废；
+> - **腕部 305 换成了另一台**（11-14，序列号 `CV27864000CB`，装在 Marvin 右臂夹爪上，顺着手指看）。`wrist_J.json` 作废；出厂参数已经重读进 `orbbec_params.json`；
+> - 俯视 335 换过机位（10-13 一次，11-14 又挪过），`top335_extrinsic.json` 作废。
 >
 > 10-12 以后，决策方向改在 [`../RobotDecision`](../RobotDecision) 里做。
 
@@ -26,7 +27,7 @@
 |---|---|---|
 | `laya/` 等根目录上游文件 | 上游 Laya（文本决策模型），说明见 [README_laya.md](README_laya.md) | 以 editable 方式装进 `laya` 环境。robojev 只有旧实验用它（`policy.py`，经 `bench_policy`、`run_loop`），抓取流程不用 |
 | `PlayJev/` | 上游 PlayJev（吃一帧画面、出动作分布），说明见 [PlayJev/README.md](PlayJev/README.md) | 在 `playjev` 环境里起服务，监听 `127.0.0.1:18732`；robojev 通过 `probe_playjev.ask` 调用 |
-| `robojev/`、`robojev_agent.py` | 自己的抓取流程和网页代理 | 跑在 `laya` 环境，经 `算法/DexGraspVLA-/SO101/atom_robot` 驱动 AR5 和夹爪 |
+| `robojev/`、`robojev_agent.py` | 自己的抓取流程和网页代理 | 跑在 `laya` 环境。旧入口经 `算法/DexGraspVLA-/SO101/atom_robot` 驱动 AR5 和夹爪；Marvin 版（`marvin*`）经 `数据_硬件/天机Marvin/` 里的官方 SDK 驱动右臂，夹爪仍走 `atom_robot` 的 HKVR 驱动 |
 
 上游代码从哪来、改过什么，见 [上游来源.md](上游来源.md) 和 [PlayJev/上游来源.md](PlayJev/上游来源.md)。
 
@@ -44,6 +45,8 @@
 | 10-12 | 末端换成灵巧手，305 重新装到手上；本流程真机暂停，决策方向改走 `../RobotDecision` |
 | 10-13 | 335 改成正上方俯视 |
 | 10-15 | 目录改名为 RobotJev，PlayJev 并入，模型放进项目的 `weights/` |
+| 11-14 | 机械臂从 AR5 换成天机 Marvin 双臂，robojev 还没接入；右臂装 TG9801 夹爪 + 新的一台腕部 305，335 换了机位 |
+| 11-16 | 接入 Marvin 右臂，第一步只走 335 直线接近：`marvin_grasp`、`calibrate_top335_marvin`。运动学全走官方 SDK。可达性扫描结论：桌面和肩同高，竖直下抓够不着，改成斜 45° 抓、够不着换 60°。离线测试过，真机未跑 |
 
 ## 入口
 
@@ -68,6 +71,8 @@ PYTHONPATH= ~/miniforge3/envs/laya/bin/python <下表的命令>
 | 看相机 | `-m robojev.view_top`，加 `--wrist` 同时看腕部 |
 | 只点选、不开相机 | `-m robojev.click_grasp --dry --frame f.npz`（用存下的一帧，npz 里要有 `color`、`depth`） |
 | 看各入口的参数 | `-m robojev.<模块> --help` |
+| **Marvin**：标 335 外参 | `-m robojev.calibrate_top335_marvin --dry-run`：只算点位，不连臂。去掉 `--dry-run` 真跑：夹爪张开 → 你递进乒乓球 → Enter 合上 → 再 Enter 才动臂，走 16 个点。结果在 `calibration/top335_marvin.json`。`--refit` 用存下的点重新拟合 |
+| **Marvin**：点选抓取 | `-m robojev.marvin_grasp`。`--dry` 只点选、看判定和规划；`--stage plan`、`--stage approach` 停在中途；`--force N` 固定力度。每次动臂前都要按 Enter |
 
 ## 代码地图（`robojev/`）
 
@@ -81,6 +86,7 @@ PYTHONPATH= ~/miniforge3/envs/laya/bin/python <下表的命令>
 | 相机、录像 | `camera`、`rec` |
 | 标定、查看 | `calibrate_top335`、`calibrate_gripper`、`read_orbbec_params`、`view_top`；结果在 `calibration/` |
 | 离线测试 | `bench_snake`（PlayJev 在贪吃蛇画面上判方向） |
+| 天机 Marvin（11-16） | `marvin` 是臂层：SDK 逆解和路径检查、B 臂执行、HKVR 夹爪。`marvin_grasp` 是点选抓取入口，`calibrate_top335_marvin` 标 335 外参。335 的几何（`top335`、`objects`）和 `run_composite.TopFollows` 原样复用 |
 
 **旧实验，但主流程还 import 它们，不能删**
 
@@ -104,7 +110,8 @@ PYTHONPATH= ~/miniforge3/envs/laya/bin/python <下表的命令>
 
 | 命令 | 正常结果 |
 |---|---|
-| `for t in tests/test_*.py; do PYTHONPATH= ~/miniforge3/envs/laya/bin/python $t; done` | 18 个文件 17 个过。`test_local_e2e` 要手动导出到 `~/laya_models` 的模型，不算 |
+| `for t in tests/test_*.py; do PYTHONPATH= ~/miniforge3/envs/laya/bin/python $t; done` | 19 个文件 18 个过。`test_local_e2e` 要手动导出到 `~/laya_models` 的模型，不算 |
+| `tests/test_marvin_offline.py` | `33 passed, 0 failed`，不到 1 秒。测 Marvin 的正解、SDK 规划、外参拟合，以及在合成 335 画面上的判定 |
 | `-m robojev.bench_policy` | 方向一致 21/24 = 87.5% |
 | `-m robojev.run_loop --instruction "把苹果放到盘子里" --sim --compare` | 54 步跑完；和解析解方向一致约 57%（`--policy geometric` 是 48 步） |
 | `run_inference_demo.py` | 跑完；中文、印地语路由到多语言模型（延迟见 [SETUP_5070Ti.md](SETUP_5070Ti.md#实测4-个问题一次前向)） |
@@ -124,17 +131,23 @@ PlayJev 自己的测试见 [PlayJev/SETUP_5070Ti.md](PlayJev/SETUP_5070Ti.md#测
 
 | 硬件 | robojev 怎么用 |
 |---|---|
-| AR5 | 经 `atom_robot` 驱动，网络配置见 [工作区说明](../../../工作区说明.md) 第 6.4 节；上电命令见 [SUMMARY 的「命令」](JEV_GRASP_SUMMARY.md#命令) |
+| AR5（11-14 已换下） | 经 `atom_robot` 驱动，网络配置见 [工作区说明](../../../工作区说明.md) 第 6.4 节；上电命令见 [SUMMARY 的「命令」](JEV_GRASP_SUMMARY.md#命令) |
+| 天机 Marvin 双臂（11-14 起） | 只用右臂 B，经 `robojev/marvin.py`。它按固定层数找 `数据_硬件/天机Marvin/` 里的官方 SDK 和 `world_calib/`。观察位是竖直向上 `[90,-90,0,0,0,0,0]`，不挡 335。只碰 B 臂，不调 `check_error_and_clear`，B 臂有错误就停、不自动清。连接和小工具见 [`数据_硬件/天机Marvin/`](../../../数据_硬件/天机Marvin/README.md) |
 | 俯视 Gemini 335 | 序列号 `CP0BB53000FC`，`robojev/camera.py` 按序列号找、走 OBSENSOR |
-| 腕部 Gemini 305 | 序列号 `CV27864000V2`，同上（现在走 OBSENSOR 出 0 帧，见开头） |
-| 夹爪 HKVR-TG9801 | robojev 没有显式指定末端，靠 `atom_robot/ar5/config.py` 里 `end_effector` 的默认值 `"hkvr"` |
-| 标定文件 | `robojev/calibration/`：`top335_extrinsic.json`、`gripper.json`、`wrist_J.json` 是 9/30 的；`orbbec335_params.json` 是 9/29 的；`orbbec_params.json`、`pregrasp_pose.json`（固定抓取朝向）是 9/28 的。旧版本在 `backup_*` |
+| 腕部 Gemini 305 | 11-14 起是 `CV27864000CB`（之前是 `CV27864000V2`），`camera.py` 的 `WRIST_SERIAL` 已改。**这台只能走 V4L2**（OBSENSOR 会弄得一帧不出），而 `camera.py` 的 `OrbbecRGBD` 只走 OBSENSOR，所以别用 robojev 打开腕部相机 |
+| 夹爪 HKVR-TG9801 | robojev 没有显式指定末端，靠 `atom_robot/ar5/config.py` 里 `end_effector` 的默认值 `"hkvr"`。11-14 起装在 Marvin 右臂上，485 波特率是 115200（config 默认 1M 不对） |
+| 标定文件 | `robojev/calibration/`：`top335_extrinsic.json`、`gripper.json`、`wrist_J.json` 是 9/30 的（都作废，见开头）；`orbbec335_params.json` 是 9/29 的；`orbbec_params.json` 是 11-14 从新 305 读的（旧那台的在 `orbbec_params_CV27864000V2.json`）；`pregrasp_pose.json`（固定抓取朝向）是 9/28 的，按 AR5 定的。旧版本在 `backup_*`。Marvin 用 `top335_marvin.json`（世界系，还没标） |
+| Marvin 的世界系和 TCP | 世界系：原点 = 右臂底座原点，X 右、Y 前、Z 上；右臂 TCP = 法兰 +Z 100 mm，绕 Z 转 45°，工具 X 轴就是手指开合方向。见 [`数据_硬件/天机Marvin/README.md`](../../../数据_硬件/天机Marvin/README.md) 的「世界坐标系」 |
 | 模型 | 根目录的 `yolov8x-worldv2.pt`、`mobile_sam.pt`；`weights/clip/`（CLIP）；`weights/laya/`（Laya）；`PlayJev/weights/PlayJev-0.8B/`。都不进 git |
 
 ## 已知问题和提示
 
 - **真机跑不了**、**别和 RobotDecision 抢相机**：见开头两条。
 - 抓取流程本身的问题（固定朝向够不着的区域、外参和末端耦合、走廊里的假障碍、力度类别分差小等）见 [SUMMARY 的已知问题](JEV_GRASP_SUMMARY.md#当前状态与已知问题10-15)。
+- **Marvin 右臂的抓取限制**：这是 11-16 用 `数据_硬件/天机Marvin/marvin_reach.py` 扫出来的。条件是桌面 z≈0，抓取区 X −150~350、Y 400~700 mm。
+  - 竖直下抓一个点都够不着：桌面和肩同高，而 J6 只能弯 ±60°。
+  - 开合方向保持水平时，倾斜只能顺着「肩 → 目标」左右约 55° 以内。所以按「45° → 60°」试，每个点能覆盖 12 类开合方向里的 7~9 类；缺的是开合方向接近「肩 → 目标」的那几类，也就是在机器人看来"竖着夹"的物体。用户的最终目标是任意朝向都能抓，这一点还没解决。可选的方向有三个：让开合方向不水平、降低桌面，或者交给左臂。
+  - 机身禁区是估的：`marvin.py` 里 `BODY_*` 写的是 y < 0.15 且 x < −0.05，没实测。左臂不在碰撞检查里。
 - **本机请求别走代理**：`.bashrc` 设了 `http_proxy`，连 `127.0.0.1` 也会走代理；PlayJev 服务没起时，代理会回 502，把「连接被拒」遮住。`probe_playjev.ask` 已经绕开代理；自己用 `curl` 测本机服务时加 `--noproxy '*'`。
 - 机器重启后 PlayJev 服务不会自己起来。内核升级后 GPU 驱动可能掉；GPU 用不了时，可以临时用 `PlayJev/serve_cpu.py` 在 CPU 上起服务，很慢，只能应急，用法见 [PlayJev/SETUP_5070Ti.md](PlayJev/SETUP_5070Ti.md#跑)。
 
@@ -184,3 +197,4 @@ PlayJev 自己的测试见 [PlayJev/SETUP_5070Ti.md](PlayJev/SETUP_5070Ti.md#测
 | [PlayJev/README.md](PlayJev/README.md) | 上游 PlayJev 的说明 |
 | [../RobotDecision](../RobotDecision) | 10-12 以后的决策方向（自动抓取闭环） |
 | [../../../工作区说明.md](../../../工作区说明.md) | 整个工作区：结构、环境、约定、离线测试、迁移 |
+| [../../../数据_硬件/天机Marvin/README.md](../../../数据_硬件/天机Marvin/README.md) | 11-14 换上的天机 Marvin 双臂：网络、两臂几何、回 0 位 / 抬臂命令、SDK |
